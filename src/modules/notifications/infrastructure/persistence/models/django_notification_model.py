@@ -1,0 +1,140 @@
+import uuid
+
+from django.conf import settings
+from django.db import models
+
+from src.modules.meetings.infrastructure.persistence.models.django_meeting_model import (
+    DjangoMeetingModel,
+)
+from src.modules.reminders.infrastructure.persistence.models.django_reminder_model import (
+    DjangoReminderModel,
+)
+from src.modules.tasks.infrastructure.persistence.models.django_task_model import (
+    DjangoTaskModel,
+)
+
+from src.modules.notifications.domain.enums.notification_type import NotificationType
+
+
+class DjangoNotificationModel(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
+    notification_type = models.CharField(
+        max_length=30,
+        choices=[
+            (notification_type.value, notification_type.value)
+            for notification_type in NotificationType
+        ],
+    )
+
+    title = models.CharField(
+        max_length=255,
+    )
+
+    message = models.TextField()
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="notifications",
+    )
+
+    task = models.ForeignKey(
+        DjangoTaskModel,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        blank=True,
+        null=True,
+    )
+
+    meeting = models.ForeignKey(
+        DjangoMeetingModel,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        blank=True,
+        null=True,
+    )
+
+    reminder = models.ForeignKey(
+        DjangoReminderModel,
+        on_delete=models.SET_NULL,
+        related_name="notifications",
+        blank=True,
+        null=True,
+    )
+
+    scheduled_for = models.DateTimeField()
+
+    expires_at = models.DateTimeField()
+
+    is_read = models.BooleanField(
+        default=False,
+    )
+
+    read_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    dismissed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        db_table = "notifications"
+        indexes = [
+            models.Index(fields=["user", "scheduled_for"], name="notif_user_sched_idx"),
+            models.Index(fields=["user", "is_read"], name="notif_user_read_idx"),
+            models.Index(fields=["expires_at"], name="notif_expires_idx"),
+            models.Index(fields=["scheduled_for"], name="notif_sched_idx"),
+            models.Index(fields=["task"], name="notif_task_idx"),
+            models.Index(fields=["meeting"], name="notif_meeting_idx"),
+            models.Index(fields=["reminder"], name="notif_reminder_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(meeting__isnull=True)
+                    | models.Q(task__isnull=True)
+                ),
+                name="notification_single_target",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(is_read=False) & models.Q(read_at__isnull=True))
+                    | (models.Q(is_read=True) & models.Q(read_at__isnull=False))
+                ),
+                name="notification_read_state_match",
+            ),
+            models.UniqueConstraint(
+                fields=["notification_type", "scheduled_for", "reminder"],
+                condition=models.Q(reminder__isnull=False),
+                name="notification_reminder_event_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["notification_type", "scheduled_for", "task"],
+                condition=models.Q(task__isnull=False),
+                name="notification_task_event_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["notification_type", "scheduled_for", "meeting"],
+                condition=models.Q(meeting__isnull=False),
+                name="notification_meeting_event_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return self.title

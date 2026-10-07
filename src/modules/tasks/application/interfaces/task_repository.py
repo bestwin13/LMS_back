@@ -1,0 +1,60 @@
+from abc import ABC, abstractmethod
+from uuid import UUID
+from datetime import date
+
+from src.modules.tasks.application.dto.get_task import GetTaskDTO
+from src.modules.tasks.domain.entities.task import Task
+from src.modules.shared.application.dto.list_query import ListQuery, PaginatedResult
+
+
+class TaskRepository(ABC):
+
+    @abstractmethod
+    def save(self, task: Task) -> Task:
+        pass
+
+    @abstractmethod
+    def get_by_id(self, task_id: UUID) -> Task | None:
+        pass
+
+    @abstractmethod
+    def get_by_id_with_relations(self, task_id: UUID) -> GetTaskDTO | None:
+        pass
+
+    @abstractmethod
+    def get_all(self, query: ListQuery) -> PaginatedResult[Task]:
+        pass
+
+    @abstractmethod
+    def get_all_with_relations(self, query: ListQuery) -> PaginatedResult[GetTaskDTO]:
+        pass
+
+    @abstractmethod
+    def get_by_due_date_range(self, start_date: date, end_date: date) -> list[Task]:
+        """Return active tasks whose due_date is within the inclusive range."""
+        pass
+
+    @abstractmethod
+    def soft_delete_by_lead_id(self, lead_id: UUID) -> None:
+        pass
+
+    @abstractmethod
+    def soft_delete_by_contact_id(self, contact_id: UUID) -> None:
+        pass
+
+    @abstractmethod
+    def soft_delete_by_account_id(self, account_id: UUID) -> None:
+        pass
+
+    @abstractmethod
+    def unlink_account_from_contact_tasks(self, account_id: UUID) -> None:
+        pass
+
+    @abstractmethod
+    def delete_by_owner_id(self, owner_id: UUID) -> int:
+        """Permanently delete every Task owned by ``owner_id``."""
+        pass
+
+    @abstractmethod
+    def count_by_owner_id(self, owner_id: UUID) -> int:
+        pass

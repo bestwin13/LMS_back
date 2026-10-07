@@ -1,0 +1,56 @@
+from abc import ABC, abstractmethod
+from uuid import UUID
+
+from src.modules.accounts.domain.entities.account import Account
+from src.modules.shared.application.dto.list_query import ListQuery, PaginatedResult
+
+
+class AccountRepository(ABC):
+
+    @abstractmethod
+    def save(self, account: Account) -> Account:
+        pass
+
+    @abstractmethod
+    def get_by_id(self, account_id: UUID) -> Account | None:
+        pass
+
+    @abstractmethod
+    def get_by_id_with_owner(
+        self,
+        account_id: UUID,
+    ) -> tuple[Account, str | None] | None:
+        pass
+
+    @abstractmethod
+    def get_all(self) -> list[Account]:
+        pass
+
+    @abstractmethod
+    def get_all_with_owner(
+        self,
+        query: ListQuery,
+    ) -> PaginatedResult[tuple[Account, str | None]]:
+        pass
+
+    @abstractmethod
+    def find_conversion_matches(
+        self,
+        account_name: str,
+        website: str | None,
+        phone: str | None,
+    ) -> list[Account]:
+        pass
+
+    @abstractmethod
+    def transfer_ownership(
+        self,
+        from_user_id: UUID,
+        to_user_id: UUID,
+    ) -> int:
+        """Reassign every Account owned by ``from_user_id`` to ``to_user_id``."""
+        pass
+
+    @abstractmethod
+    def count_by_owner_id(self, owner_id: UUID) -> int:
+        pass
